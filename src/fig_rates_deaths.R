@@ -19,7 +19,6 @@ aug <- forecast(mod_deaths,
   mutate(draws_ci(.fitted))
 
 p_ageslices <- aug %>%
-  filter(age %in% seq(0, 90, 10)) %>%
   ggplot(aes(x = time)) +
   facet_wrap(vars(age)) +
   geom_ribbon(aes(ymin = .fitted.lower,

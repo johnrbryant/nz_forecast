@@ -17,11 +17,10 @@ labels <- seq(from = max(mod_deaths$data$time) + 1L,
 comp <- forecast(mod_deaths,
                  labels = labels,
                  output = "components",
-                 include_estimates = TRUE,
-                 standardize = TRUE)
+                 include_estimates = TRUE)
 
 
-p_trend <- comp %>%
+p_time <- comp %>%
   filter(term == "time",
          component %in% c("effect", "trend", "cyclical")) %>%
   mutate(draws_ci(.fitted)) %>%
@@ -42,36 +41,55 @@ p_trend <- comp %>%
   ggtitle("Time effect and underlying components")
 
 
-p_agesextime <- comp %>%
-  filter(term == "age:sex:time",
+p_agetime <- comp %>%
+  filter(term == "age:time",
          component == "effect") %>%
   select(-term, -component) %>%
-  separate_wider_delim(level, delim = ".", names = c("age", "sex", "time")) %>%
+  separate_wider_delim(level, delim = ".", names = c("age", "time")) %>%
   mutate(time = as.integer(time)) %>%
   mutate(draws_ci(.fitted)) %>%
-  filter(age %in% seq(0, 90, 10)) %>%
   ggplot(aes(x = time)) +
   facet_wrap(vars(age)) +
   geom_ribbon(aes(ymin = .fitted.lower,
-                  ymax = .fitted.upper,
-                  fill = sex),
+                  ymax = .fitted.upper),
+              fill = "steelblue1",
               alpha = 0.4) +
-  geom_line(aes(y = .fitted.mid,
-                color = sex)) +
+  geom_line(aes(y = .fitted.mid),
+            color = "darkblue") +
   xlab("Time") +
   ylab("") +
-  ggtitle("Time effect and underlying components")
+  ggtitle("Age:time interaction")
+
+
+p_sextime <- comp %>%
+  filter(term == "sex:time",
+         component == "effect") %>%
+  select(-term, -component) %>%
+  separate_wider_delim(level, delim = ".", names = c("sex", "time")) %>%
+  mutate(time = as.integer(time)) %>%
+  mutate(draws_ci(.fitted)) %>%
+  ggplot(aes(x = time)) +
+  facet_wrap(vars(sex)) +
+  geom_ribbon(aes(ymin = .fitted.lower,
+                  ymax = .fitted.upper),
+              fill = "steelblue1",
+              alpha = 0.4) +
+  geom_line(aes(y = .fitted.mid),
+            color = "darkblue") +
+  xlab("Time") +
+  ylab("") +
+  ggtitle("Sex:time interaction")
 
 
 p_svd <- comp %>%
-  filter(term == "age:sex:time" & component == "svd") %>%
+  filter(term == "age:time" & component == "svd") %>%
   select(-term, -component) %>%
-  separate_wider_delim(level, delim = ".", names = c("sex", "component", "time")) %>%
+  separate_wider_delim(level, delim = ".", names = c("component", "time")) %>%
   mutate(component = sub("comp", "Component ", component),
          time = as.integer(time)) %>%
   mutate(draws_ci(.fitted)) %>%
   ggplot(aes(x = time)) +
-  facet_grid(vars(sex), vars(component)) +
+  facet_wrap(vars(component)) +
   geom_ribbon(aes(ymin = .fitted.lower,
                   ymax = .fitted.upper),
               fill = "steelblue1") +
@@ -79,7 +97,7 @@ p_svd <- comp %>%
             color = "darkblue") +
   xlab("Time") +
   ylab("") +
-  ggtitle("Time trends in SVD components, by sex")
+  ggtitle("Time trends in SVD components")
   
 
 graphics.off()
@@ -87,7 +105,9 @@ pdf(file = .out,
     width = 10,
     height = 10,
     onefile = TRUE)
-plot(p_trend)
+plot(p_time)
+plot(p_agetime)
+plot(p_sextime)
 plot(p_svd)
 dev.off()  
   
